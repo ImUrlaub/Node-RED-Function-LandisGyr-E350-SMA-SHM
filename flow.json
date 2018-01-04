@@ -1,0 +1,58 @@
+[
+    {
+        "id": "b8c19d38.2b4e6",
+        "type": "debug",
+        "z": "14677b13.c63e25",
+        "name": "",
+        "active": true,
+        "console": "false",
+        "complete": "payload",
+        "x": 835.1669616699219,
+        "y": 421.66681480407715,
+        "wires": []
+    },
+    {
+        "id": "d0dfda40.672a28",
+        "type": "serial in",
+        "z": "14677b13.c63e25",
+        "name": "",
+        "serial": "8dd5adf4.349a2",
+        "x": 462.16670989990234,
+        "y": 423.3333578109741,
+        "wires": [
+            [
+                "5d244f48.f0a3e"
+            ]
+        ]
+    },
+    {
+        "id": "5d244f48.f0a3e",
+        "type": "function",
+        "z": "14677b13.c63e25",
+        "name": "Parse D0 Data",
+        "func": "var data = context.get('data')||{};\n\nvar n = Date.now();\n\nvar interval = 60000;\n\nvar changed = 0;\n\nif(!data.hasOwnProperty(\"NT\")) data.NT = 0.0;\nif(!data.hasOwnProperty(\"HT\")) data.HT = 0.0;\nif(!data.hasOwnProperty(\"T\")) data.T = 0.0;\nif(!data.hasOwnProperty(\"R\")) data.R = 0.0;\nif(!data.hasOwnProperty(\"CurrentPowerPurchased\")) data.CurrentPowerPurchased = 0.0;\nif(!data.hasOwnProperty(\"LastTotalEnergyPurchased\")) data.LastTotalEnergyPurchased = 0.0;\nif(!data.hasOwnProperty(\"LastTotalTimePurchased\")) data.LastTotalTimePurchased = 0.0;\n\nif(!data.hasOwnProperty(\"CurrentPowerDelivered\")) data.CurrentPowerDelivered = 0.0;\nif(!data.hasOwnProperty(\"LastTotalEnergyDelivered\")) data.LastTotalEnergyDelivered = 0.0;\nif(!data.hasOwnProperty(\"LastTotalTimeDelivered\")) data.LastTotalTimeDelivered = 0.0;\n\nd = msg.payload;\n\nif(d.substr(0, 5)===\"1.8.1\") data.NT = parseFloat(d.substring(d.indexOf(\"(\")+1,d.indexOf(\"*\")));\nif(d.substr(0, 5)===\"1.8.2\") data.HT = parseFloat(d.substring(d.indexOf(\"(\")+1,d.indexOf(\"*\")));\nif(d.substr(0, 5)===\"1.8.0\"){\n    data.T = parseFloat(d.substring(d.indexOf(\"(\")+1,d.indexOf(\"*\")));\n    //First time only setting no evaluating\n    if(data.LastTotalEnergyPurchased === 0.0){\n        data.LastTotalEnergyPurchased = data.T;\n        data.LastTotalTimePurchased = n;\n    }\n    else{\n        var timeDifference = n-data.LastTotalTimePurchased;\n        if(timeDifference >= interval){\n            var energyDifference = data.T-data.LastTotalEnergyPurchased;\n            //Calculate with hours\n            timeDifference = timeDifference / 1000.0 / 60.0 / 60.0;\n            data.CurrentPowerPurchased = energyDifference / timeDifference;\n            data.LastTotalTimePurchased = n;\n            data.LastTotalEnergyPurchased = data.T;\n        }\n    }\n}\n    \nif(d.substr(0, 5)===\"2.8.0\"){\n    data.R = parseFloat(d.substring(d.indexOf(\"(\")+1,d.indexOf(\"*\")));\n    //First time only setting no evaluating\n    if(data.LastTotalEnergyDelivered === 0.0){\n        data.LastTotalEnergyDelivered = data.T;\n        data.LastTotalTimeDelivered = n;\n    }\n    else{\n        var timeDifference = n-data.LastTotalTimeDelivered;\n        if(timeDifference >= interval){\n            var energyDifference = data.R-data.LastTotalEnergyDelivered;\n            //Calculate with hours\n            timeDifference = timeDifference / 1000.0 / 60.0 / 60.0;\n            data.CurrentPowerDelivered = energyDifference / timeDifference;\n            data.LastTotalTimeDelivered = n;\n            data.LastTotalEnergyDelivered = data.R;\n            changed = 1\n        }\n    }\n}\n\ncontext.set('data',data);\n\nif(changed === 1){\n    msg.payload = data;\n    return msg;  \n}\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 652.1667098999023,
+        "y": 422.0000343322754,
+        "wires": [
+            [
+                "b8c19d38.2b4e6"
+            ]
+        ]
+    },
+    {
+        "id": "8dd5adf4.349a2",
+        "type": "serial-port",
+        "z": "",
+        "serialport": "/dev/ttyUSB0",
+        "serialbaud": "4800",
+        "databits": "7",
+        "parity": "even",
+        "stopbits": "1",
+        "newline": "\\n",
+        "bin": "false",
+        "out": "char",
+        "addchar": false
+    }
+]
